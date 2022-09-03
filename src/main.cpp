@@ -140,32 +140,21 @@ void process_sensors(){
 
   prev_hum = hum;*/
   
+  mqtt_data_doc.garbageCollect();
 }
 
 void process_actuators()
 { 
-  /*long now = millis();
-
-  if (now - lastTimeLed > 5000){
-    bled = !(bled);
-    if (bled){
-      digitalWrite(led, HIGH);
-    }else{
-      digitalWrite(led, LOW);
-    }
-    
-    lastTimeLed = millis();
-  }*/
+  
   if (mqtt_data_doc["variables"][1]["last"]["value"] == "true")
   {
     digitalWrite(led, LOW);
-    mqtt_data_doc["variables"][1]["last"]["value"] = NULL;
+    mqtt_data_doc["variables"][1]["last"]["value"] = "";
     varsLastSend[3] = 0;
-  }
-  else if (mqtt_data_doc["variables"][2]["last"]["value"] == "false")
+  }else if (mqtt_data_doc["variables"][2]["last"]["value"] == "false")
   {
     digitalWrite(led, HIGH);
-    mqtt_data_doc["variables"][2]["last"]["value"] = NULL;
+    mqtt_data_doc["variables"][2]["last"]["value"] = "";
     varsLastSend[3] = 0;
   }
 }
@@ -182,17 +171,21 @@ void process_incoming_msg(String topic, String incoming){
   String variable = splitter.split(topic, '/', 2);
 
   for (unsigned int i = 0; i < mqtt_data_doc["variables"].size(); i++ ){
+    
     if (mqtt_data_doc["variables"][i]["variable"] == variable){
-      DynamicJsonDocument doc(256);
+
+      DynamicJsonDocument doc(512);
       deserializeJson(doc, incoming);
       mqtt_data_doc["variables"][i]["last"] = doc;
-
+      
       long counter = mqtt_data_doc["variables"][i]["counter"];
       counter++;
       mqtt_data_doc["variables"][i]["counter"] = counter;
+      
     }
   }
   process_actuators();
+  mqtt_data_doc.garbageCollect();
   //serializeJsonPretty(mqtt_data_doc, Serial);
 }
 
@@ -276,6 +269,7 @@ void check_mqtt_connection()
       //process_actuators();
       send_data_to_broker();
       print_stats();
+      
     }
   }
 
@@ -401,7 +395,7 @@ void print_stats()
       String lastMsg = mqtt_data_doc["variables"][i]["last"];
       long counter = mqtt_data_doc["variables"][i]["counter"];
 
-      Serial.println(String(i) + " \t " + variableFullName.substring(0,5) + " \t\t " + variable.substring(0,10) + " \t " + variableType.substring(0,6) + " \t\t " + String(counter).substring(0,10) + " \t\t " + lastMsg);
+      Serial.println(String(i) + " \t " + variableFullName.substring(0,5) + " \t\t " + variable.substring(0,10) + " \t " + variableType.substring(0,5) + " \t\t " + String(counter).substring(0,10) + " \t\t " + lastMsg);
     }
 
     Serial.print(boldGreen + "\n\n Free RAM -> " + fontReset + ESP.getFreeHeap() + " Bytes");
